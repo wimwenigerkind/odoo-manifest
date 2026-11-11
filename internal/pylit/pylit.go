@@ -7,12 +7,24 @@ import (
 	"unicode"
 )
 
+// Manifests come from untrusted sources, so input size and nesting are bounded:
+// unbounded recursion exhausts the goroutine stack, a fatal error that recover
+// cannot catch.
+const (
+	maxInputSize = 1 << 20
+	maxDepth     = 64
+)
+
 type parser struct {
-	src []rune
-	pos int
+	src   []rune
+	pos   int
+	depth int
 }
 
 func Parse(src []byte) (any, error) {
+	if len(src) > maxInputSize {
+		return nil, fmt.Errorf("input of %d bytes exceeds the maximum size of %d bytes", len(src), maxInputSize)
+	}
 	p := &parser{src: []rune(string(src))}
 	p.skipTrivia()
 	if p.pos >= len(p.src) {
@@ -53,6 +65,13 @@ func (p *parser) parseValue() (any, error) {
 		return nil, fmt.Errorf("unexpected end of input")
 	}
 	c := p.src[p.pos]
+	if c == '{' || c == '[' || c == '(' {
+		if p.depth == maxDepth {
+			return nil, fmt.Errorf("nesting exceeds the maximum depth of %d at offset %d", maxDepth, p.pos)
+		}
+		p.depth++
+		defer func() { p.depth-- }()
+	}
 	switch {
 	case c == '{':
 		return p.parseBrace()

@@ -22,6 +22,9 @@ lists, tuples, dicts and set literals. It tolerates the coding line, comments,
 trailing commas and implicit string concatenation, and rejects computed values
 with a clear error.
 
+Because manifests are often untrusted input, `Parse` rejects input larger than
+1 MiB and lists, tuples, dicts and sets nested deeper than 64 levels.
+
 Odoo defaults are applied when a key is absent: `license` defaults to `LGPL-3`,
 `category` to `Uncategorized`, and `installable` to `true`. Version
 interpretation is left to the caller.
